@@ -16,7 +16,9 @@ class Base(DeclarativeBase):
 
 async def init_db():
     # Import models so that Base.metadata is populated
-    # (imports locaux pour éviter les cycles)
+    from app.models.person import Person  # noqa: F401
+
+    _ = Person
 
     # Create metadata if any model is declared later
     async with engine.begin() as conn:

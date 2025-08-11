@@ -5,6 +5,7 @@ from typing import List
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from app.api.v1.persons import router as persons_router
 
 
 def _get_bool(env_name: str, default: bool = False) -> bool:
@@ -44,7 +45,11 @@ OPENAPI_URL = None if DISABLE_DOCS else "/openapi.json"
 async def lifespan(app: FastAPI):
     _configure_logging()
     logging.info("Application startup")
-    # TODO: initialize DB connections, caches, clients here
+    # Initialize DB connections and create tables
+    from app.core.db import init_db
+
+    await init_db()
+    logging.info("Database initialized")
     try:
         yield
     finally:
@@ -87,8 +92,7 @@ async def readyz():
 
 
 # TODO: include your routers here
-# from .routers import users
-# app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(persons_router, prefix="/api/v1/persons", tags=["persons"])
 
 
 if __name__ == "__main__":
