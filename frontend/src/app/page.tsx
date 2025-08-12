@@ -5,7 +5,14 @@ import { Person, PersonCreate, PersonUpdate } from '@/types/person';
 import { personApi, ApiError } from '@/lib/api';
 import { PersonCard } from '@/components/PersonCard';
 import { PersonForm } from '@/components/PersonForm';
-import { Search, Plus, Users, AlertCircle, Loader2 } from 'lucide-react';
+import { DeleteConfirmation } from '@/components/DeleteConfirmation';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Search, Plus, Users, AlertCircle, Loader2, X, Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
   const [persons, setPersons] = useState<Person[]>([]);
@@ -16,6 +23,8 @@ export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingPerson, setDeletingPerson] = useState<Person | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Charger toutes les personnes
   const loadPersons = async () => {
@@ -73,17 +82,23 @@ export default function Home() {
   };
 
   // Supprimer une personne
-  const handleDelete = async (person: Person) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${person.first_name} ${person.last_name} ?`)) {
-      return;
-    }
+  const handleDelete = (person: Person) => {
+    setDeletingPerson(person);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingPerson) return;
 
     try {
+      setIsDeleting(true);
       setError(null);
-      await personApi.delete(person.id);
-      setPersons(prev => prev.filter(p => p.id !== person.id));
+      await personApi.delete(deletingPerson.id);
+      setPersons(prev => prev.filter(p => p.id !== deletingPerson.id));
+      setDeletingPerson(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erreur lors de la suppression');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -117,117 +132,155 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* En-tête */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-background">
+      {/* En-tête moderne */}
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Users className="text-blue-600" size={32} />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">SMC ERP</h1>
-                <p className="text-gray-600">Gestion des Personnes</p>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary rounded-lg">
+                  <Building2 className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground">SMC ERP</h1>
+                  <p className="text-muted-foreground text-sm">Système de Gestion des Personnes</p>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <Plus size={20} />
-              <span>Ajouter une personne</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <ThemeToggle />
+              <Button onClick={() => setShowForm(true)} size="default" className="shadow-sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle personne
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Contenu principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Barre de recherche */}
-        <div className="mb-8">
-          <form onSubmit={handleSearch} className="flex space-x-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher par nom ou prénom..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isSearching}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors flex items-center space-x-2"
-            >
-              {isSearching ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <Search size={20} />
-              )}
-              <span>Rechercher</span>
-            </button>
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                className="px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Section de recherche */}
+        <Card className="shadow-sm">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSearch} className="flex gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher par nom, prénom, email..."
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isSearching}
+                variant="default"
+                className="min-w-[120px]"
               >
-                Effacer
-              </button>
-            )}
-          </form>
-        </div>
+                {isSearching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Recherche...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    Rechercher
+                  </>
+                )}
+              </Button>
+              {searchQuery && (
+                <Button
+                  type="button"
+                  onClick={clearSearch}
+                  variant="outline"
+                  size="default"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Effacer
+                </Button>
+              )}
+            </form>
+          </CardContent>
+        </Card>
 
         {/* Messages d'erreur */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="text-red-600" size={20} />
-            <span className="text-red-700">{error}</span>
-          </div>
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <span className="text-destructive font-medium">{error}</span>
+              </div>
+            </CardContent>
+          </Card>
         )}
+
+        {/* Statistiques et état */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Badge variant="secondary" className="text-sm">
+              <Users className="h-3 w-3 mr-1" />
+              {persons.length} {persons.length <= 1 ? 'personne' : 'personnes'}
+            </Badge>
+            {searchQuery && (
+              <Badge variant="outline" className="text-sm">
+                Résultats pour "{searchQuery}"
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <Separator />
 
         {/* État de chargement */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="animate-spin text-blue-600" size={32} />
-            <span className="ml-3 text-gray-600">Chargement...</span>
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center space-y-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                  <p className="text-muted-foreground">Chargement des données...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <>
-            {/* Statistiques */}
-            <div className="mb-6 text-sm text-gray-600">
-              {searchQuery ? (
-                <span>{persons.length} résultat(s) pour "{searchQuery}"</span>
-              ) : (
-                <span>{persons.length} personne(s) au total</span>
-              )}
-            </div>
-
             {/* Liste des personnes */}
             {persons.length === 0 ? (
-              <div className="text-center py-12">
-                <Users className="mx-auto text-gray-400 mb-4" size={64} />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {searchQuery ? 'Aucun résultat trouvé' : 'Aucune personne enregistrée'}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {searchQuery 
-                    ? 'Essayez avec d\'autres termes de recherche.'
-                    : 'Commencez par ajouter votre première personne.'
-                  }
-                </p>
-                {!searchQuery && (
-                  <button
-                    onClick={() => setShowForm(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Ajouter une personne
-                  </button>
-                )}
-              </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-12 space-y-6">
+                    <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center">
+                      <Users className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-semibold text-foreground">
+                        {searchQuery ? 'Aucun résultat trouvé' : 'Aucune personne enregistrée'}
+                      </h3>
+                      <p className="text-muted-foreground max-w-md mx-auto">
+                        {searchQuery 
+                          ? 'Essayez avec d\'autres termes de recherche ou vérifiez l\'orthographe.'
+                          : 'Commencez par ajouter votre première personne pour démarrer la gestion de votre répertoire.'
+                        }
+                      </p>
+                    </div>
+                    {!searchQuery && (
+                      <Button onClick={() => setShowForm(true)} size="lg" className="shadow-sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter votre première personne
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {persons.map((person) => (
                   <PersonCard
                     key={person.id}
@@ -243,14 +296,27 @@ export default function Home() {
       </main>
 
       {/* Modal de formulaire */}
-      {showForm && (
-        <PersonForm
-          person={editingPerson || undefined}
-          onSubmit={handleFormSubmit}
-          onCancel={handleCloseForm}
-          isLoading={isSubmitting}
-        />
-      )}
+      <PersonForm
+        open={showForm}
+        person={editingPerson || undefined}
+        onSubmit={handleFormSubmit}
+        onCancel={handleCloseForm}
+        isLoading={isSubmitting}
+      />
+
+      {/* Confirmation de suppression */}
+      <DeleteConfirmation
+        open={!!deletingPerson}
+        onOpenChange={(open) => !open && setDeletingPerson(null)}
+        onConfirm={confirmDelete}
+        title="Supprimer cette personne"
+        description={
+          deletingPerson
+            ? `Êtes-vous sûr de vouloir supprimer ${deletingPerson.first_name} ${deletingPerson.last_name} ? Cette action est irréversible.`
+            : ''
+        }
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
