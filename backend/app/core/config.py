@@ -1,8 +1,10 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+
 from pathlib import Path
+from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_BACKEND_DIR: Path = Path(__file__).resolve().parents[2]
 load_dotenv(_BACKEND_DIR / ".env")
 load_dotenv(_BACKEND_DIR / ".env.local")
 
@@ -11,19 +13,14 @@ class Settings(BaseSettings):
     ENV: str = "development"
     API_PREFIX: str = "/api/v1"
 
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "smc_erp"
-    POSTGRES_USER: str = "smc"
-    POSTGRES_PASSWORD: str = "smc"
+    # Variables PostgreSQL
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
+    POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", 5432))
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "smc_erp")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "smc")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "smc")
 
     CORS_ORIGINS: str = "*"  # comma-separated
-
-    model_config = SettingsConfigDict(
-        env_file=(str(_BACKEND_DIR / ".env"), str(_BACKEND_DIR / ".env.local")),
-        case_sensitive=False,
-        env_prefix="SMC_",
-    )
 
     @property
     def DATABASE_URL(self) -> str:
