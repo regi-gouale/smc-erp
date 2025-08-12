@@ -27,6 +27,43 @@ async def get_persons(
 
 
 @router.get(
+    "/search", response_model=List[PersonRead], summary="Rechercher des personnes"
+)
+async def search_persons(
+    q: str = Query(..., min_length=1, description="Terme de recherche (nom ou prénom)"),
+    skip: int = Query(0, ge=0, description="Nombre d'éléments à ignorer"),
+    limit: int = Query(10, ge=1, le=100, description="Nombre d'éléments à retourner"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Recherche des personnes par nom ou prénom.
+    La recherche est insensible à la casse et peut contenir des parties de mots.
+    """
+    search_term = f"%{q.lower()}%"
+
+    stmt = (
+        select(Person)
+        .where(
+            or_(
+                func.lower(Person.first_name).like(search_term),
+                func.lower(Person.last_name).like(search_term),
+                func.lower(func.concat(Person.first_name, " ", Person.last_name)).like(
+                    search_term
+                ),
+            )
+        )
+        .offset(skip)
+        .limit(limit)
+        .order_by(Person.first_name, Person.last_name)
+    )
+
+    result = await db.execute(stmt)
+    persons = result.scalars().all()
+
+    return persons
+
+
+@router.get(
     "/{person_id}", response_model=PersonRead, summary="Récupérer une personne par UUID"
 )
 async def get_person(
@@ -138,40 +175,3 @@ async def delete_person(
     stmt = delete(Person).where(Person.id == person_id)
     await db.execute(stmt)
     await db.commit()
-
-
-@router.get(
-    "/search/", response_model=List[PersonRead], summary="Rechercher des personnes"
-)
-async def search_persons(
-    q: str = Query(..., min_length=1, description="Terme de recherche (nom ou prénom)"),
-    skip: int = Query(0, ge=0, description="Nombre d'éléments à ignorer"),
-    limit: int = Query(10, ge=1, le=100, description="Nombre d'éléments à retourner"),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Recherche des personnes par nom ou prénom.
-    La recherche est insensible à la casse et peut contenir des parties de mots.
-    """
-    search_term = f"%{q.lower()}%"
-
-    stmt = (
-        select(Person)
-        .where(
-            or_(
-                func.lower(Person.first_name).like(search_term),
-                func.lower(Person.last_name).like(search_term),
-                func.lower(func.concat(Person.first_name, " ", Person.last_name)).like(
-                    search_term
-                ),
-            )
-        )
-        .offset(skip)
-        .limit(limit)
-        .order_by(Person.first_name, Person.last_name)
-    )
-
-    result = await db.execute(stmt)
-    persons = result.scalars().all()
-
-    return persons

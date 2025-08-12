@@ -110,7 +110,7 @@ async def test_api():
 
         # Test 9: Rechercher des personnes
         print("\n9. Rechercher des personnes par nom 'Jean'")
-        response = await client.get(f"{BASE_URL}/api/v1/persons/search/?q=Jean")
+        response = await client.get(f"{BASE_URL}/api/v1/persons/search?q=Jean")
         print(f"Status: {response.status_code}")
         if response.status_code == 200:
             search_results = response.json()
@@ -122,7 +122,7 @@ async def test_api():
 
         # Test 10: Rechercher par nom de famille
         print("\n10. Rechercher des personnes par nom de famille 'Martin'")
-        response = await client.get(f"{BASE_URL}/api/v1/persons/search/?q=Martin")
+        response = await client.get(f"{BASE_URL}/api/v1/persons/search?q=Martin")
         print(f"Status: {response.status_code}")
         if response.status_code == 200:
             search_results = response.json()
